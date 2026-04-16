@@ -162,7 +162,14 @@ async function handleCommand(msg) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.status(200).send("Home Budget Bot");
+    const hasVars = {
+      TELEGRAM_TOKEN: !!process.env.TELEGRAM_TOKEN,
+      OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      SUPABASE_KEY: !!process.env.SUPABASE_KEY,
+      ALLOWED_USER_IDS: !!process.env.ALLOWED_USER_IDS,
+    };
+    res.status(200).json({ status: "ok", env: hasVars });
     return;
   }
 
