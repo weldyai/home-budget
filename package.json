@@ -2,6 +2,9 @@
   "name": "home-budget",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "build": "npm install --prefix webapp && npm run build --prefix webapp"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4"
   }

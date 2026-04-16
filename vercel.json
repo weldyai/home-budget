@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm --prefix webapp install && npm --prefix webapp run build",
+  "buildCommand": "npm run build",
   "outputDirectory": "webapp/dist",
   "routes": [
     { "src": "/webhook", "dest": "/api/webhook" },
