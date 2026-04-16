@@ -61,13 +61,17 @@ export default function Depenses({ month, filter }) {
   const handle_submit = async (ev) => {
     ev.preventDefault()
     set_saving(true)
-    const payload = { description: form.description, amount: parseFloat(form.amount), category: form.category, date: form.date, paid_by: form.paid_by }
+    const payload = { description: form.description || form.category, amount: parseFloat(form.amount), category: form.category, date: form.date, paid_by: form.paid_by }
+    let error
     if (modal === 'edit') {
-      await supabase.from('expenses').update(payload).eq('id', form.id)
+      const res = await supabase.from('expenses').update(payload).eq('id', form.id)
+      error = res.error
     } else {
-      await supabase.from('expenses').insert([payload])
+      const res = await supabase.from('expenses').insert([payload])
+      error = res.error
     }
     set_saving(false)
+    if (error) { alert('Erreur : ' + error.message); return }
     close_modal()
     fetch_data()
   }
