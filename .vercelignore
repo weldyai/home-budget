@@ -1,0 +1,5 @@
+bot/
+requirements.txt
+Dockerfile
+supabase/
+webapp/
