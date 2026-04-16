@@ -5,7 +5,8 @@ import { monthRange } from '../lib/dates'
 
 Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, BarController, ArcElement, DoughnutController, Legend)
 
-const BUDGET = 5000
+const DEFAULT_BUDGET = 5000
+const BUDGET_KEY = 'home_budget_monthly'
 const CATEGORIES = ['alimentation', 'restauration', 'transport', 'logement', 'sante', 'loisirs', 'habillement', 'education', 'services', 'autre']
 const ICONS = {
   alimentation: '🛒', restauration: '🍽️', transport: '🚗', logement: '🏠',
@@ -29,6 +30,7 @@ export default function Analyse({ month, filter }) {
   const [expenses, set_expenses] = useState([])
   const [history, set_history] = useState([])
   const [loading, set_loading] = useState(true)
+  const budget = Number(localStorage.getItem(BUDGET_KEY)) || DEFAULT_BUDGET
   const bar_ref = useRef(null)
   const bar_instance = useRef(null)
 
@@ -111,7 +113,7 @@ export default function Analyse({ month, filter }) {
         </div>
         <div className="stat-card">
           <span className="stat-label">Moyenne</span>
-          <span className={`stat-value ${avg_history <= BUDGET ? 'green' : 'red'}`}>
+          <span className={`stat-value ${avg_history <= budget ? 'green' : 'red'}`}>
             {avg_history.toFixed(0)}<br /><small style={{ fontSize: '0.6rem', fontWeight: 500 }}>MAD</small>
           </span>
         </div>

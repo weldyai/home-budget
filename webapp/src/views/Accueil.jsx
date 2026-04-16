@@ -5,7 +5,8 @@ import { monthRange } from '../lib/dates'
 
 Chart.register(ArcElement, Tooltip, Legend, DoughnutController)
 
-const BUDGET = 5000
+const DEFAULT_BUDGET = 5000
+const BUDGET_KEY = 'home_budget_monthly'
 
 const ICONS = {
   alimentation: { emoji: '🛒', bg: '#14532d' },
@@ -26,6 +27,9 @@ const CATEGORIES = ['alimentation','restauration','transport','logement','sante'
 export default function Accueil({ month, filter }) {
   const [expenses, set_expenses] = useState([])
   const [loading, set_loading] = useState(true)
+  const [budget, set_budget] = useState(() => Number(localStorage.getItem(BUDGET_KEY)) || DEFAULT_BUDGET)
+  const [editing_budget, set_editing_budget] = useState(false)
+  const [budget_input, set_budget_input] = useState('')
   const chart_ref = useRef(null)
   const chart_instance = useRef(null)
 
@@ -47,8 +51,8 @@ export default function Accueil({ month, filter }) {
 
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
   const nb = expenses.length
-  const savings = BUDGET - total
-  const pct = Math.min((total / BUDGET) * 100, 100)
+  const savings = budget - total
+  const pct = Math.min((total / budget) * 100, 100)
 
   const by_cat = CATEGORIES.map(cat => ({
     cat,
@@ -114,18 +118,39 @@ export default function Accueil({ month, filter }) {
       </div>
 
       <div className="card">
-        <div className="card-title">Budget mensuel</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div className="card-title" style={{ margin: 0 }}>Budget mensuel</div>
+          <button className="icon-btn" style={{ fontSize: '0.8rem', padding: '4px 8px' }} onClick={() => { set_budget_input(String(budget)); set_editing_budget(true) }}>✏️</button>
+        </div>
         <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{ width: `${pct}%`, background: progress_color }}
-          />
+          <div className="progress-fill" style={{ width: `${pct}%`, background: progress_color }} />
         </div>
         <div className="progress-label">
           <span>{total.toFixed(0)} MAD</span>
-          <span>{pct.toFixed(0)}% de {BUDGET} MAD</span>
+          <span>{pct.toFixed(0)}% de {budget} MAD</span>
         </div>
       </div>
+
+      {editing_budget && (
+        <div className="modal-overlay" onClick={() => set_editing_budget(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle" />
+            <div className="modal-title">Budget mensuel</div>
+            <div className="form-group">
+              <label className="form-label">Montant (MAD)</label>
+              <input className="form-input" type="number" min="0" value={budget_input} onChange={e => set_budget_input(e.target.value)} autoFocus />
+            </div>
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => set_editing_budget(false)}>Annuler</button>
+              <button className="btn btn-primary" onClick={() => {
+                const val = Number(budget_input)
+                if (val > 0) { set_budget(val); localStorage.setItem(BUDGET_KEY, val) }
+                set_editing_budget(false)
+              }}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {by_cat.length > 0 && (
         <div className="card">
