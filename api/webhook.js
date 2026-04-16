@@ -53,7 +53,10 @@ async function classify(message, today) {
         }),
       });
 
-      if (!res.ok) continue;
+      if (!res.ok) {
+        console.error(`[classify] ${model} → ${res.status}: ${await res.text()}`);
+        continue;
+      }
 
       const data = await res.json();
       let content = data.choices[0].message.content.trim();
@@ -61,7 +64,8 @@ async function classify(message, today) {
         content = content.split("\n").slice(1, -1).join("\n");
       }
       return JSON.parse(content);
-    } catch {
+    } catch (e) {
+      console.error(`[classify] ${model} error:`, e.message);
       continue;
     }
   }
@@ -91,8 +95,9 @@ async function handleMessage(msg) {
   let expense;
   try {
     expense = await classify(text, today);
-  } catch {
-    await sendMessage(chatId, "Erreur de classification. Réessaie.");
+  } catch (e) {
+    console.error("[handleMessage] classify failed:", e.message);
+    await sendMessage(chatId, `Erreur: ${e.message}`);
     return;
   }
 
