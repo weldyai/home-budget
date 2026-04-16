@@ -32,10 +32,11 @@ export default function Accueil({ month, filter }) {
 
   const fetch_data = async () => {
     const { from, to } = monthRange(month)
-    let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
+    let q = supabase.from('expenses').select('*').limit(5)
     if (filter !== 'tous') q = q.eq('paid_by', filter)
     const { data, error } = await q
-    set_debug(error ? `Erreur: ${error.message}` : `${(data||[]).length} ligne(s) — plage: ${from} → ${to}`)
+    const cols = data?.[0] ? Object.keys(data[0]).join(', ') : 'aucune donnée'
+    set_debug(error ? `Erreur: ${error.message}` : `${(data||[]).length} ligne(s) — colonnes: ${cols}`)
     set_expenses(data || [])
     set_loading(false)
   }
