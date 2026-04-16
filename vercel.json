@@ -1,5 +1,9 @@
 {
+  "buildCommand": "cd webapp && npm install && npm run build",
+  "outputDirectory": "webapp/dist",
   "routes": [
-    { "src": "/webhook", "dest": "/api/webhook" }
+    { "src": "/webhook", "dest": "/api/webhook" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
