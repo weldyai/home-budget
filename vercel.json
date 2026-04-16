@@ -1,0 +1,10 @@
+{
+  "rewrites": [{ "source": "/api/webhook", "destination": "/api/webhook" }],
+  "env": {
+    "TELEGRAM_TOKEN": "@telegram_token",
+    "OPENROUTER_API_KEY": "@openrouter_api_key",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_KEY": "@supabase_key",
+    "ALLOWED_USER_IDS": "@allowed_user_ids"
+  }
+}
