@@ -27,20 +27,18 @@ Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après.`;
 
 async function classify(message, today) {
   const models = [
-    "google/gemma-4-26b-a4b-it:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "mixtral-8x7b-32768",
   ];
 
   for (const model of models) {
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/home-budget-agent",
-          "X-Title": "Home Budget Agent",
         },
         body: JSON.stringify({
           model,
