@@ -1,98 +1,132 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './lib/supabase'
-import { monthRange } from './lib/dates'
-import ExpenseList from './components/ExpenseList'
-import CategoryChart from './components/CategoryChart'
-import MonthlyBar from './components/MonthlyBar'
+import { useState } from 'react'
+import Accueil from './views/Accueil'
+import Depenses from './views/Depenses'
+import Calendrier from './views/Calendrier'
+import Analyse from './views/Analyse'
 import './index.css'
 
-function getMonthRange(offset = 0) {
-  const d = new Date()
-  d.setMonth(d.getMonth() + offset)
-  return d.toISOString().slice(0, 7)
+const today = new Date()
+const pad = n => String(n).padStart(2, '0')
+const current_month = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`
+
+function prev_month(m) {
+  const [y, mo] = m.split('-').map(Number)
+  const d = new Date(y, mo - 2, 1)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
 }
 
+function next_month(m) {
+  const [y, mo] = m.split('-').map(Number)
+  const d = new Date(y, mo, 1)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+}
+
+const VIEWS = [
+  {
+    id: 'accueil',
+    label: 'Accueil',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'depenses',
+    label: 'Dépenses',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+        <line x1="1" y1="10" x2="23" y2="10"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'calendrier',
+    label: 'Calendrier',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'analyse',
+    label: 'Analyse',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+    ),
+  },
+]
+
 export default function App() {
-  const [offset, setOffset] = useState(0)
-  const [tab, setTab] = useState('liste')
-  const [stats, setStats] = useState({ total: 0, count: 0, top: '-' })
+  const [view, set_view] = useState('accueil')
+  const [month, set_month] = useState(current_month)
+  const [filter, set_filter] = useState('tous')
 
-  const month = getMonthRange(offset)
-
-  useEffect(() => {
-    fetchStats()
-    const interval = setInterval(fetchStats, 10000)
-    return () => clearInterval(interval)
-  }, [month])
-
-  async function fetchStats() {
-    const { data } = await supabase
-      .from('expenses')
-      .select('amount, category')
-      .gte('date', monthRange(month).from)
-      .lte('date', monthRange(month).to)
-
-    if (!data?.length) return setStats({ total: 0, count: 0, top: '-' })
-
-    const total = data.reduce((s, r) => s + parseFloat(r.amount), 0)
-    const cats = {}
-    data.forEach(r => cats[r.category] = (cats[r.category] || 0) + parseFloat(r.amount))
-    const top = Object.entries(cats).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
-    setStats({ total, count: data.length, top })
+  const render_view = () => {
+    const props = { month, filter }
+    switch (view) {
+      case 'accueil': return <Accueil {...props} />
+      case 'depenses': return <Depenses {...props} />
+      case 'calendrier': return <Calendrier {...props} />
+      case 'analyse': return <Analyse {...props} />
+      default: return null
+    }
   }
-
-  const isCurrentMonth = offset === 0
 
   return (
     <div className="app">
       <header className="header">
-        <div className="header-row">
-          <h1>💰 Budget Famille</h1>
-          <span className="live-badge">
+        <div className="header-top">
+          <div className="header-title">💰 Budget</div>
+          <div className="live-badge">
             <span className="live-dot" />
-            live
-          </span>
-        </div>
-        <div className="header-row" style={{ marginTop: '.6rem' }}>
-          <div className="month-nav">
-            <button onClick={() => setOffset(o => o - 1)}>‹</button>
-            <span className="month-label">{month}</span>
-            <button onClick={() => setOffset(o => Math.min(o + 1, 0))} disabled={isCurrentMonth} style={{ opacity: isCurrentMonth ? .3 : 1 }}>›</button>
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>
-            {stats.total.toFixed(0)} <span style={{ fontSize: '.8rem', color: 'var(--muted)' }}>MAD</span>
+            Live
           </div>
         </div>
-      </header>
-
-      <main className="main">
-        <div className="stats-row">
-          <div className="stat-card">
-            <span className="stat-label">Dépenses</span>
-            <span className="stat-value blue">{stats.count}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Total</span>
-            <span className="stat-value green">{stats.total.toFixed(0)}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Top</span>
-            <span className="stat-value purple" style={{ fontSize: '.85rem' }}>{stats.top}</span>
-          </div>
+        <div className="month-nav">
+          <button onClick={() => set_month(prev_month(month))}>‹</button>
+          <span className="month-label">{month}</span>
+          <button onClick={() => set_month(next_month(month))}>›</button>
         </div>
-
-        <div className="tabs">
-          {['liste', 'catégories', 'historique'].map(t => (
-            <button key={t} className={`tab${tab === t ? ' active' : ''}`} onClick={() => setTab(t)}>
-              {t === 'liste' ? '📋' : t === 'catégories' ? '🥧' : '📊'} {t}
+        <div className="filter-bar">
+          {['tous', 'brahim', 'wife'].map(f => (
+            <button
+              key={f}
+              className={`filter-pill${filter === f ? ' active' : ''}`}
+              onClick={() => set_filter(f)}
+            >
+              {f === 'tous' ? 'Tous' : f === 'brahim' ? 'Moi' : 'Femme'}
             </button>
           ))}
         </div>
+      </header>
 
-        {tab === 'liste' && <ExpenseList month={month} />}
-        {tab === 'catégories' && <CategoryChart month={month} />}
-        {tab === 'historique' && <MonthlyBar />}
+      <main className="main-content">
+        {render_view()}
       </main>
+
+      <nav className="nav-bottom">
+        {VIEWS.map(v => (
+          <button
+            key={v.id}
+            className={`nav-btn${view === v.id ? ' active' : ''}`}
+            onClick={() => set_view(v.id)}
+          >
+            {v.icon}
+            {v.label}
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
