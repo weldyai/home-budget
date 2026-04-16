@@ -26,6 +26,7 @@ const CATEGORIES = ['alimentation','restauration','transport','logement','sante'
 export default function Accueil({ month, filter }) {
   const [expenses, set_expenses] = useState([])
   const [loading, set_loading] = useState(true)
+  const [debug, set_debug] = useState('')
   const chart_ref = useRef(null)
   const chart_instance = useRef(null)
 
@@ -33,7 +34,8 @@ export default function Accueil({ month, filter }) {
     const { from, to } = monthRange(month)
     let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
     if (filter !== 'tous') q = q.eq('paid_by', filter)
-    const { data } = await q
+    const { data, error } = await q
+    set_debug(error ? `Erreur: ${error.message}` : `${(data||[]).length} ligne(s) — plage: ${from} → ${to}`)
     set_expenses(data || [])
     set_loading(false)
   }
@@ -96,6 +98,7 @@ export default function Accueil({ month, filter }) {
 
   return (
     <>
+      {debug && <div style={{ background: '#1e293b', color: '#94a3b8', fontSize: '0.75rem', padding: '6px 12px', borderRadius: 8, marginBottom: 8 }}>{debug}</div>}
       <div className="stats-row">
         <div className="stat-card">
           <span className="stat-label">Total</span>
