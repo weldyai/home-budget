@@ -1,17 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Chart, BarElement, CategoryScale, LinearScale, Tooltip, Legend, BarController } from 'chart.js'
+import { Chart, BarElement, CategoryScale, LinearScale, Tooltip, BarController } from 'chart.js'
 import { supabase } from '../lib/supabase'
 
-Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, BarController)
+Chart.register(BarElement, CategoryScale, LinearScale, Tooltip, BarController)
 
 function getLast6Months() {
-  const months = []
-  const now = new Date()
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    months.push(d.toISOString().slice(0, 7))
-  }
-  return months
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - (5 - i))
+    return d.toISOString().slice(0, 7)
+  })
 }
 
 export default function MonthlyBar() {
@@ -20,64 +18,49 @@ export default function MonthlyBar() {
   const [totals, setTotals] = useState([])
   const months = getLast6Months()
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
 
   useEffect(() => {
-    if (!canvasRef.current || totals.length === 0) return
-
-    if (chartRef.current) chartRef.current.destroy()
-
+    if (!canvasRef.current || !totals.length) return
+    chartRef.current?.destroy()
+    const max = Math.max(...totals)
     chartRef.current = new Chart(canvasRef.current, {
       type: 'bar',
       data: {
-        labels: months,
+        labels: months.map(m => m.slice(5)),
         datasets: [{
-          label: 'Total (MAD)',
           data: totals,
-          backgroundColor: '#60a5fa',
-          borderRadius: 6,
+          backgroundColor: totals.map((v, i) => i === totals.length - 1 ? '#3b82f6' : '#334155'),
+          borderRadius: 8,
+          borderSkipped: false,
         }],
       },
       options: {
         responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => ` ${ctx.parsed.y.toFixed(2)} MAD`,
-            },
-          },
-        },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} MAD` } } },
         scales: {
-          x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
-          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#1e293b' } },
         },
       },
     })
-
     return () => chartRef.current?.destroy()
   }, [totals])
 
   async function fetchData() {
-    const results = await Promise.all(
-      months.map(async (month) => {
-        const { data } = await supabase
-          .from('expenses')
-          .select('amount')
-          .gte('date', `${month}-01`)
-          .lte('date', `${month}-31`)
-        return data ? data.reduce((acc, r) => acc + parseFloat(r.amount), 0) : 0
-      })
-    )
+    const results = await Promise.all(months.map(async m => {
+      const { data } = await supabase.from('expenses').select('amount').gte('date', `${m}-01`).lte('date', `${m}-31`)
+      return data?.reduce((s, r) => s + parseFloat(r.amount), 0) || 0
+    }))
     setTotals(results)
   }
 
   return (
     <div className="card">
-      <h2>6 derniers mois</h2>
-      <canvas ref={canvasRef} />
+      <div className="card-title">📊 6 derniers mois</div>
+      <div className="chart-wrap">
+        <canvas ref={canvasRef} />
+      </div>
     </div>
   )
 }
