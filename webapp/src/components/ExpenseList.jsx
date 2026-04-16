@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { monthRange } from '../lib/dates'
 
 const ICONS = {
   alimentation: { emoji: '🛒', bg: '#14532d' },
@@ -27,8 +28,8 @@ export default function ExpenseList({ month }) {
     const { data } = await supabase
       .from('expenses')
       .select('*')
-      .gte('date', `${month}-01`)
-      .lte('date', `${month}-31`)
+      .gte('date', monthRange(month).from)
+      .lte('date', monthRange(month).to)
       .order('created_at', { ascending: false })
       .limit(30)
     if (data) setExpenses(data)

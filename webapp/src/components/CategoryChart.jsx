@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Chart, ArcElement, Tooltip, DoughnutController } from 'chart.js'
 import { supabase } from '../lib/supabase'
+import { monthRange } from '../lib/dates'
 
 Chart.register(ArcElement, Tooltip, DoughnutController)
 
@@ -36,7 +37,7 @@ export default function CategoryChart({ month }) {
   }, [data])
 
   async function fetchData() {
-    const { data: rows } = await supabase.from('expenses').select('category, amount').gte('date', `${month}-01`).lte('date', `${month}-31`)
+    const { data: rows } = await supabase.from('expenses').select('category, amount').gte('date', monthRange(month).from).lte('date', monthRange(month).to)
     if (!rows?.length) return setData([])
     const agg = {}
     rows.forEach(r => agg[r.category] = (agg[r.category] || 0) + parseFloat(r.amount))

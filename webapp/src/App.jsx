@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { monthRange } from './lib/dates'
 import ExpenseList from './components/ExpenseList'
 import CategoryChart from './components/CategoryChart'
 import MonthlyBar from './components/MonthlyBar'
@@ -28,8 +29,8 @@ export default function App() {
     const { data } = await supabase
       .from('expenses')
       .select('amount, category')
-      .gte('date', `${month}-01`)
-      .lte('date', `${month}-31`)
+      .gte('date', monthRange(month).from)
+      .lte('date', monthRange(month).to)
 
     if (!data?.length) return setStats({ total: 0, count: 0, top: '-' })
 
