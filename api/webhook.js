@@ -103,7 +103,7 @@ async function handleMessage(msg) {
     expense.paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
   }
 
-  await supabase.from("expenses").insert({
+  const { error: dbError } = await supabase.from("expenses").insert({
     amount: expense.amount,
     currency: expense.currency || "MAD",
     category: expense.category,
@@ -115,6 +115,11 @@ async function handleMessage(msg) {
     raw_message: text,
     confidence: expense.confidence,
   });
+
+  if (dbError) {
+    await sendMessage(chatId, `Erreur DB: ${dbError.message}`);
+    return;
+  }
 
   const emoji = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
   const icon = emoji[expense.category] || "💰";
