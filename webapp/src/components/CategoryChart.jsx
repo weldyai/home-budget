@@ -11,7 +11,11 @@ export default function CategoryChart({ month }) {
   const chartRef = useRef(null)
   const [data, setData] = useState([])
 
-  useEffect(() => { fetchData() }, [month])
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 10000)
+    return () => clearInterval(interval)
+  }, [month])
 
   useEffect(() => {
     if (!canvasRef.current || !data.length) return

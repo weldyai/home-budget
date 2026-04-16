@@ -19,12 +19,8 @@ export default function ExpenseList({ month }) {
 
   useEffect(() => {
     fetchExpenses()
-    const ch = supabase.channel(`expenses-${month}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses' }, (payload) => {
-        setExpenses(prev => [payload.new, ...prev].slice(0, 30))
-      })
-      .subscribe()
-    return () => supabase.removeChannel(ch)
+    const interval = setInterval(fetchExpenses, 10000)
+    return () => clearInterval(interval)
   }, [month])
 
   async function fetchExpenses() {

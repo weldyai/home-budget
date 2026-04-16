@@ -20,10 +20,8 @@ export default function App() {
 
   useEffect(() => {
     fetchStats()
-    const ch = supabase.channel('stats-refresh')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses' }, fetchStats)
-      .subscribe()
-    return () => supabase.removeChannel(ch)
+    const interval = setInterval(fetchStats, 10000)
+    return () => clearInterval(interval)
   }, [month])
 
   async function fetchStats() {
