@@ -2,4 +2,5 @@ bot/
 requirements.txt
 Dockerfile
 supabase/
-webapp/
+webapp/node_modules/
+webapp/dist/
