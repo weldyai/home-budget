@@ -148,6 +148,17 @@ async function handleCallback(cq) {
     return;
   }
 
+  if (data.startsWith("del|")) {
+    const id = data.slice(4);
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) {
+      await editMessage(chatId, messageId, `❌ Erreur: ${error.message}`);
+      return;
+    }
+    await editMessage(chatId, messageId, "🗑 Dépense supprimée.");
+    return;
+  }
+
   if (data.startsWith("ok|")) {
     const parts = data.split("|");
     const [, amount, currency, category, paid_by, paid_for, date, ...descParts] = parts;
@@ -178,6 +189,37 @@ async function handleCommand(msg) {
   const userId = msg.from.id;
 
   if (!ALLOWED_IDS.includes(userId)) return;
+
+  if (msg.text === "/delete") {
+    const paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("id, amount, currency, description, category, date")
+      .eq("paid_by", paid_by)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error || !data?.length) {
+      await sendMessage(chatId, "Aucune dépense à supprimer.");
+      return;
+    }
+
+    const e = data[0];
+    const icon = EMOJI[e.category] || "💰";
+    await sendMessage(
+      chatId,
+      `${icon} Supprimer cette dépense ?\n\n${e.amount} ${e.currency || "MAD"} — ${e.description}\nDate : ${e.date}`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "🗑 Supprimer", callback_data: `del|${e.id}` },
+            { text: "❌ Annuler", callback_data: "no" },
+          ]],
+        },
+      }
+    );
+    return;
+  }
 
   if (msg.text === "/report" || msg.text?.startsWith("/report")) {
     const month = new Date().toISOString().slice(0, 7);
