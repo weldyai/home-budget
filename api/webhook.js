@@ -221,6 +221,27 @@ async function handleCommand(msg) {
     return;
   }
 
+  if (msg.text === "/budget") {
+    const month = new Date().toISOString().slice(0, 7);
+    const { data } = await supabase
+      .from("expenses")
+      .select("amount")
+      .gte("date", `${month}-01`);
+
+    const total = (data || []).reduce((s, e) => s + Number(e.amount), 0);
+    const budget = 5000;
+    const restant = budget - total;
+    const pct = Math.min((total / budget) * 100, 100).toFixed(0);
+    const bar = "█".repeat(Math.round(pct / 10)) + "░".repeat(10 - Math.round(pct / 10));
+    const emoji = restant >= 0 ? (pct < 60 ? "🟢" : pct < 85 ? "🟡" : "🔴") : "🔴";
+
+    await sendMessage(
+      chatId,
+      `${emoji} Budget ${month}\n\n${bar} ${pct}%\n\nDépensé : ${total.toFixed(0)} MAD\nRestant  : ${restant.toFixed(0)} MAD\nBudget   : ${budget} MAD`
+    );
+    return;
+  }
+
   if (msg.text === "/report" || msg.text?.startsWith("/report")) {
     const month = new Date().toISOString().slice(0, 7);
     const { data } = await supabase
