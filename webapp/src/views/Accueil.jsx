@@ -7,20 +7,38 @@ const DEFAULT_BUDGET = 5000
 const BUDGET_KEY = 'home_budget_monthly'
 
 const ICONS = {
-  alimentation: { emoji: '🛒', bg: '#14532d' },
-  restauration: { emoji: '🍽️', bg: '#7c2d12' },
-  transport:    { emoji: '🚗', bg: '#1e3a5f' },
-  logement:     { emoji: '🏠', bg: '#3b1f6e' },
-  sante:        { emoji: '💊', bg: '#7f1d1d' },
-  loisirs:      { emoji: '🎬', bg: '#713f12' },
-  habillement:  { emoji: '👗', bg: '#831843' },
-  education:    { emoji: '📚', bg: '#064e3b' },
-  services:     { emoji: '📱', bg: '#1e3a5f' },
-  autre:        { emoji: '💰', bg: '#1e293b' },
+  alimentation: { emoji: '🛒', bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+  restauration: { emoji: '🍽️', bg: 'rgba(251,146,60,0.15)', color: '#fb923c' },
+  transport:    { emoji: '🚗', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+  logement:     { emoji: '🏠', bg: 'rgba(139,92,246,0.15)', color: '#8b5cf6' },
+  sante:        { emoji: '💊', bg: 'rgba(244,63,94,0.15)',  color: '#f43f5e' },
+  loisirs:      { emoji: '🎬', bg: 'rgba(234,179,8,0.15)',  color: '#eab308' },
+  habillement:  { emoji: '👗', bg: 'rgba(236,72,153,0.15)', color: '#ec4899' },
+  education:    { emoji: '📚', bg: 'rgba(20,184,166,0.15)', color: '#14b8a6' },
+  services:     { emoji: '📱', bg: 'rgba(99,102,241,0.15)', color: '#6366f1' },
+  autre:        { emoji: '💰', bg: 'rgba(148,163,184,0.15)',color: '#94a3b8' },
 }
 
-const COLORS = ['#3b82f6','#f97316','#22c55e','#a855f7','#ef4444','#eab308','#ec4899','#14b8a6','#64748b','#94a3b8']
+const COLORS = ['#6366f1','#f97316','#10d9a0','#a855f7','#f43f5e','#eab308','#ec4899','#14b8a6','#64748b','#94a3b8']
 const CATEGORIES = ['alimentation','restauration','transport','logement','sante','loisirs','habillement','education','services','autre']
+
+function RingProgress({ pct, color, size = 170 }) {
+  const r = (size - 18) / 2
+  const circ = 2 * Math.PI * r
+  const dash = circ * Math.min(pct / 100, 1)
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={9} />
+      <circle
+        cx={size/2} cy={size/2} r={r} fill="none"
+        stroke={color} strokeWidth={9}
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`}
+        style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(0.34,1.56,0.64,1)', filter: `drop-shadow(0 0 8px ${color})` }}
+      />
+    </svg>
+  )
+}
 
 export default function Accueil({ expenses, loading }) {
   const [budget, set_budget] = useState(() => Number(localStorage.getItem(BUDGET_KEY)) || DEFAULT_BUDGET)
@@ -33,6 +51,7 @@ export default function Accueil({ expenses, loading }) {
   const nb = expenses.length
   const savings = budget - total
   const pct = Math.min((total / budget) * 100, 100)
+  const ring_color = pct < 60 ? '#10d9a0' : pct < 85 ? '#fb923c' : '#f43f5e'
 
   const by_cat = CATEGORIES.map(cat => ({
     cat,
@@ -44,73 +63,65 @@ export default function Accueil({ expenses, loading }) {
   useEffect(() => {
     if (!chart_ref.current || by_cat.length === 0) return
     if (chart_instance.current) chart_instance.current.destroy()
-
     chart_instance.current = new Chart(chart_ref.current, {
       type: 'doughnut',
       data: {
         labels: by_cat.map(x => x.cat),
-        datasets: [{
-          data: by_cat.map(x => x.sum),
-          backgroundColor: COLORS.slice(0, by_cat.length),
-          borderWidth: 0,
-          hoverOffset: 4,
-        }],
+        datasets: [{ data: by_cat.map(x => x.sum), backgroundColor: COLORS.slice(0, by_cat.length), borderWidth: 0, hoverOffset: 4 }],
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '68%',
+        responsive: true, maintainAspectRatio: false, cutout: '70%',
         plugins: {
           legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.label}: ${ctx.raw.toFixed(0)} MAD`,
-            },
-          },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw.toFixed(0)} MAD` } },
         },
       },
     })
-
     return () => { if (chart_instance.current) chart_instance.current.destroy() }
   }, [by_cat.map(x => x.cat + x.sum).join()])
 
-  if (loading) return <div className="loading">Chargement…</div>
-
-  const progress_color = pct < 60 ? 'var(--green)' : pct < 85 ? 'var(--orange)' : 'var(--red)'
+  if (loading) return <div className="loading" />
 
   return (
     <>
-<div className="stats-row">
-        <div className="stat-card">
-          <span className="stat-label">Total</span>
-          <span className="stat-value blue">{total.toFixed(0)}<br /><small style={{fontSize:'0.6rem',fontWeight:500}}>MAD</small></span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Dépenses</span>
-          <span className="stat-value">{nb}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Économies</span>
-          <span className={`stat-value ${savings >= 0 ? 'green' : 'red'}`}>
-            {savings.toFixed(0)}<br /><small style={{fontSize:'0.6rem',fontWeight:500}}>MAD</small>
-          </span>
+      {/* ── HERO CARD ── */}
+      <div className="hero-card">
+        <div className="hero-glow" style={{ background: `radial-gradient(circle, ${ring_color}22 0%, transparent 70%)` }} />
+        <div className="hero-top">
+          <div className="hero-ring-wrap">
+            <RingProgress pct={pct} color={ring_color} />
+            <div className="hero-center">
+              <div className="hero-amount">{total.toFixed(0)}</div>
+              <div className="hero-unit">MAD</div>
+              <div className="hero-pct" style={{ color: ring_color }}>{pct.toFixed(0)}%</div>
+            </div>
+          </div>
+          <div className="hero-meta">
+            <div className="hero-meta-item">
+              <span className="hero-meta-label">Budget</span>
+              <span className="hero-meta-val">{budget.toLocaleString()} MAD</span>
+            </div>
+            <div className="hero-meta-item">
+              <span className="hero-meta-label">Restant</span>
+              <span className="hero-meta-val" style={{ color: savings >= 0 ? '#10d9a0' : '#f43f5e' }}>
+                {savings.toFixed(0)} MAD
+              </span>
+            </div>
+            <div className="hero-meta-item">
+              <span className="hero-meta-label">Dépenses</span>
+              <span className="hero-meta-val">{nb}</span>
+            </div>
+            <button
+              className="hero-edit-btn"
+              onClick={() => { set_budget_input(String(budget)); set_editing_budget(true) }}
+            >
+              Modifier budget
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <div className="card-title" style={{ margin: 0 }}>Budget mensuel</div>
-          <button className="icon-btn" style={{ fontSize: '0.8rem', padding: '4px 8px' }} onClick={() => { set_budget_input(String(budget)); set_editing_budget(true) }}>✏️</button>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${pct}%`, background: progress_color }} />
-        </div>
-        <div className="progress-label">
-          <span>{total.toFixed(0)} MAD</span>
-          <span>{pct.toFixed(0)}% de {budget} MAD</span>
-        </div>
-      </div>
-
+      {/* ── MODAL BUDGET ── */}
       {editing_budget && (
         <div className="modal-overlay" onClick={() => set_editing_budget(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -118,7 +129,8 @@ export default function Accueil({ expenses, loading }) {
             <div className="modal-title">Budget mensuel</div>
             <div className="form-group">
               <label className="form-label">Montant (MAD)</label>
-              <input className="form-input" type="number" min="0" value={budget_input} onChange={e => set_budget_input(e.target.value)} autoFocus />
+              <input className="form-input" type="number" min="0" value={budget_input}
+                onChange={e => set_budget_input(e.target.value)} autoFocus />
             </div>
             <div className="form-actions">
               <button className="btn btn-secondary" onClick={() => set_editing_budget(false)}>Annuler</button>
@@ -132,12 +144,11 @@ export default function Accueil({ expenses, loading }) {
         </div>
       )}
 
+      {/* ── PAR CATÉGORIE ── */}
       {by_cat.length > 0 && (
         <div className="card">
           <div className="card-title">Par catégorie</div>
-          <div className="donut-wrap">
-            <canvas ref={chart_ref} />
-          </div>
+          <div className="donut-wrap"><canvas ref={chart_ref} /></div>
           <ul className="legend-list">
             {by_cat.map((x, i) => (
               <li key={x.cat} className="legend-item">
@@ -151,6 +162,7 @@ export default function Accueil({ expenses, loading }) {
         </div>
       )}
 
+      {/* ── TOP DÉPENSES ── */}
       {top3.length > 0 && (
         <div className="card">
           <div className="card-title">Top dépenses</div>
