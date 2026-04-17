@@ -181,6 +181,12 @@ async function handleCallback(cq) {
 
     const icon = EMOJI[category] || "💰";
     await editMessage(chatId, messageId, `${icon} Enregistré !\n${amount} ${currency} — ${description}\nCatégorie : ${category}\nPayé par : ${paid_by}`);
+
+    for (const otherId of ALLOWED_IDS) {
+      if (otherId !== userId) {
+        await sendMessage(otherId, `${icon} Nouvelle dépense ajoutée\n${amount} ${currency} — ${description}\nCatégorie : ${category}\nPayé par : ${paid_by}`);
+      }
+    }
   }
 }
 
