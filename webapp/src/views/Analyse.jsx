@@ -26,8 +26,7 @@ function prev_months(month, n) {
   return months
 }
 
-export default function Analyse({ month, filter }) {
-  const [expenses, set_expenses] = useState([])
+export default function Analyse({ month, filter, expenses, loading: expenses_loading }) {
   const [history, set_history] = useState([])
   const [loading, set_loading] = useState(true)
   const budget = Number(localStorage.getItem(BUDGET_KEY)) || DEFAULT_BUDGET
@@ -36,13 +35,7 @@ export default function Analyse({ month, filter }) {
 
   useEffect(() => {
     set_loading(true)
-    const fetch_all = async () => {
-      const { from, to } = monthRange(month)
-      let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
-      if (filter !== 'tous') q = q.eq('paid_by', filter)
-      const { data: cur } = await q
-      set_expenses(cur || [])
-
+    const fetch_history = async () => {
       const months_list = prev_months(month, 4)
       const hist = await Promise.all(months_list.map(async m => {
         const { from: f, to: t } = monthRange(m)
@@ -54,9 +47,7 @@ export default function Analyse({ month, filter }) {
       set_history(hist)
       set_loading(false)
     }
-    fetch_all()
-    const interval = setInterval(fetch_all, 10000)
-    return () => clearInterval(interval)
+    fetch_history()
   }, [month, filter])
 
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
@@ -96,7 +87,7 @@ export default function Analyse({ month, filter }) {
     return () => { if (bar_instance.current) bar_instance.current.destroy() }
   }, [history.map(h => h.month + h.total).join(), month])
 
-  if (loading) return <div className="loading">Chargement…</div>
+  if (expenses_loading || loading) return <div className="loading">Chargement…</div>
 
   const avg_history = history.length > 0 ? history.reduce((s, h) => s + h.total, 0) / history.length : 0
 

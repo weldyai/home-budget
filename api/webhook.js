@@ -8,6 +8,8 @@ const supabase = createClient(
 const ALLOWED_IDS = process.env.ALLOWED_USER_IDS.split(",").map(Number);
 const BRAHIM_ID = ALLOWED_IDS[0];
 
+const EMOJI = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
+
 const SYSTEM_PROMPT = `Tu es un classificateur de dépenses pour un budget familial marocain.
 Analyse le message et retourne UNIQUEMENT un objet JSON valide avec ces champs :
 {
@@ -70,15 +72,24 @@ async function classify(message, today) {
   throw new Error("Classification impossible");
 }
 
-async function sendMessage(chatId, text) {
-  await fetch(
-    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    }
-  );
+async function telegramRequest(method, body) {
+  await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+async function sendMessage(chatId, text, extra = {}) {
+  await telegramRequest("sendMessage", { chat_id: chatId, text, ...extra });
+}
+
+async function answerCallback(callbackQueryId) {
+  await telegramRequest("answerCallbackQuery", { callback_query_id: callbackQueryId });
+}
+
+async function editMessage(chatId, messageId, text) {
+  await telegramRequest("editMessageText", { chat_id: chatId, message_id: messageId, text });
 }
 
 async function handleMessage(msg) {
@@ -103,31 +114,63 @@ async function handleMessage(msg) {
     expense.paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
   }
 
-  const { error: dbError } = await supabase.from("expenses").insert({
-    amount: expense.amount,
-    currency: expense.currency || "MAD",
-    category: expense.category,
-    subcategory: expense.subcategory || null,
-    description: expense.description,
-    paid_by: expense.paid_by,
-    paid_for: expense.paid_for || "both",
-    date: expense.date || today,
-    raw_message: text,
-    confidence: expense.confidence,
-  });
-
-  if (dbError) {
-    await sendMessage(chatId, `Erreur DB: ${dbError.message}`);
-    return;
-  }
-
-  const emoji = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
-  const icon = emoji[expense.category] || "💰";
+  const icon = EMOJI[expense.category] || "💰";
+  const desc = (expense.description || expense.category).slice(0, 10);
+  // Format: ok|amount|currency|category|paid_by|paid_for|date|desc (max 64 bytes)
+  const cbData = `ok|${expense.amount}|${expense.currency || "MAD"}|${expense.category}|${expense.paid_by}|${expense.paid_for || "both"}|${expense.date || today}|${desc}`;
 
   await sendMessage(
     chatId,
-    `${icon} Enregistré !\n${expense.amount} ${expense.currency} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}`
+    `${icon} Confirmer cette dépense ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today}`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "✅ Oui", callback_data: cbData },
+          { text: "❌ Non", callback_data: "no" },
+        ]],
+      },
+    }
   );
+}
+
+async function handleCallback(cq) {
+  const chatId = cq.message.chat.id;
+  const userId = cq.from.id;
+  const messageId = cq.message.message_id;
+  const data = cq.data;
+
+  await answerCallback(cq.id);
+
+  if (!ALLOWED_IDS.includes(userId)) return;
+
+  if (data === "no") {
+    await editMessage(chatId, messageId, "❌ Dépense annulée.");
+    return;
+  }
+
+  if (data.startsWith("ok|")) {
+    const parts = data.split("|");
+    const [, amount, currency, category, paid_by, paid_for, date, ...descParts] = parts;
+    const description = descParts.join("|") || category;
+
+    const { error } = await supabase.from("expenses").insert({
+      amount: parseFloat(amount),
+      currency: currency || "MAD",
+      category,
+      description,
+      paid_by,
+      paid_for: paid_for || "both",
+      date,
+    });
+
+    if (error) {
+      await editMessage(chatId, messageId, `❌ Erreur DB: ${error.message}`);
+      return;
+    }
+
+    const icon = EMOJI[category] || "💰";
+    await editMessage(chatId, messageId, `${icon} Enregistré !\n${amount} ${currency} — ${description}\nCatégorie : ${category}\nPayé par : ${paid_by}`);
+  }
 }
 
 async function handleCommand(msg) {
@@ -167,7 +210,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     const hasVars = {
       TELEGRAM_TOKEN: !!process.env.TELEGRAM_TOKEN,
-      OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
+      GROQ_API_KEY: !!process.env.GROQ_API_KEY,
       SUPABASE_URL: !!process.env.SUPABASE_URL,
       SUPABASE_KEY: !!process.env.SUPABASE_KEY,
       ALLOWED_USER_IDS: !!process.env.ALLOWED_USER_IDS,
@@ -177,8 +220,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message } = req.body;
-    if (message?.text?.startsWith("/")) {
+    const { message, callback_query } = req.body;
+    if (callback_query) {
+      await handleCallback(callback_query);
+    } else if (message?.text?.startsWith("/")) {
       await handleCommand(message);
     } else if (message) {
       await handleMessage(message);

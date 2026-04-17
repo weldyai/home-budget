@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Accueil from './views/Accueil'
 import Depenses from './views/Depenses'
 import Calendrier from './views/Calendrier'
 import Analyse from './views/Analyse'
+import { supabase } from './lib/supabase'
+import { monthRange } from './lib/dates'
 import './index.css'
 
 const today = new Date()
@@ -71,9 +73,27 @@ export default function App() {
   const [view, set_view] = useState('accueil')
   const [month, set_month] = useState(current_month)
   const [filter, set_filter] = useState('tous')
+  const [expenses, set_expenses] = useState([])
+  const [loading, set_loading] = useState(true)
+
+  const fetch_data = async () => {
+    const { from, to } = monthRange(month)
+    let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
+    if (filter !== 'tous') q = q.eq('paid_by', filter)
+    const { data } = await q
+    set_expenses(data || [])
+    set_loading(false)
+  }
+
+  useEffect(() => {
+    set_loading(true)
+    fetch_data()
+    const interval = setInterval(fetch_data, 10000)
+    return () => clearInterval(interval)
+  }, [month, filter])
 
   const render_view = () => {
-    const props = { month, filter }
+    const props = { month, filter, expenses, loading, refresh: fetch_data }
     switch (view) {
       case 'accueil': return <Accueil {...props} />
       case 'depenses': return <Depenses {...props} />

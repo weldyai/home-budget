@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { monthRange } from '../lib/dates'
 
@@ -18,33 +18,17 @@ const ICONS = {
 const CATEGORIES = Object.keys(ICONS)
 const EMPTY_FORM = { description: '', amount: '', category: 'alimentation', date: new Date().toISOString().slice(0, 10), paid_by: 'brahim' }
 
-export default function Depenses({ month, filter }) {
-  const [expenses, set_expenses] = useState([])
-  const [loading, set_loading] = useState(true)
+export default function Depenses({ month, expenses, loading, refresh }) {
   const [cat_filter, set_cat_filter] = useState('tous')
-  const [modal, set_modal] = useState(null) // null | 'add' | 'edit'
+  const [modal, set_modal] = useState(null)
   const [form, set_form] = useState(EMPTY_FORM)
   const [saving, set_saving] = useState(false)
-  const [confirm, set_confirm] = useState(null) // null | { type: 'delete', id } | { type: 'reset' }
+  const [confirm, set_confirm] = useState(null)
   const [working, set_working] = useState(false)
 
-  const fetch_data = async () => {
-    const { from, to } = monthRange(month)
-    let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to).order('date', { ascending: false })
-    if (filter !== 'tous') q = q.eq('paid_by', filter)
-    const { data } = await q
-    set_expenses(data || [])
-    set_loading(false)
-  }
+  const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date))
 
-  useEffect(() => {
-    set_loading(true)
-    fetch_data()
-    const interval = setInterval(fetch_data, 10000)
-    return () => clearInterval(interval)
-  }, [month, filter])
-
-  const filtered = cat_filter === 'tous' ? expenses : expenses.filter(e => e.category === cat_filter)
+  const filtered = cat_filter === 'tous' ? sorted : sorted.filter(e => e.category === cat_filter)
 
   const open_add = () => {
     set_form(EMPTY_FORM)
@@ -73,7 +57,7 @@ export default function Depenses({ month, filter }) {
     set_saving(false)
     if (error) { alert('Erreur : ' + error.message); return }
     close_modal()
-    fetch_data()
+    refresh()
   }
 
   const handle_confirm = async () => {
@@ -87,7 +71,7 @@ export default function Depenses({ month, filter }) {
     }
     set_working(false)
     set_confirm(null)
-    fetch_data()
+    refresh()
   }
 
   if (loading) return <div className="loading">Chargement…</div>
@@ -105,7 +89,7 @@ export default function Depenses({ month, filter }) {
       <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="card-title" style={{ margin: 0 }}>{filtered.length} dépense{filtered.length !== 1 ? 's' : ''}</span>
         <div style={{ display: 'flex', gap: 8 }}>
-          {expenses.length > 0 && (
+          {sorted.length > 0 && (
             <button className="btn btn-danger-outline" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => set_confirm({ type: 'reset' })}>
               Remettre à zéro
             </button>

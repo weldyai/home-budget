@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { monthRange } from '../lib/dates'
+import { useState } from 'react'
 
 const ICONS = {
   alimentation: '🛒', restauration: '🍽️', transport: '🚗', logement: '🏠',
@@ -10,25 +8,8 @@ const ICONS = {
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
-export default function Calendrier({ month, filter }) {
-  const [expenses, set_expenses] = useState([])
-  const [loading, set_loading] = useState(true)
+export default function Calendrier({ month, expenses, loading }) {
   const [selected_day, set_selected_day] = useState(null)
-
-  useEffect(() => {
-    set_loading(true)
-    const fetch_data = async () => {
-      const { from, to } = monthRange(month)
-      let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
-      if (filter !== 'tous') q = q.eq('paid_by', filter)
-      const { data } = await q
-      set_expenses(data || [])
-      set_loading(false)
-    }
-    fetch_data()
-    const interval = setInterval(fetch_data, 10000)
-    return () => clearInterval(interval)
-  }, [month, filter])
 
   const [year, mon] = month.split('-').map(Number)
   const first_day = new Date(year, mon - 1, 1)

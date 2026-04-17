@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Chart, ArcElement, Tooltip, Legend, DoughnutController } from 'chart.js'
-import { supabase } from '../lib/supabase'
-import { monthRange } from '../lib/dates'
 
 Chart.register(ArcElement, Tooltip, Legend, DoughnutController)
 
@@ -24,30 +22,12 @@ const ICONS = {
 const COLORS = ['#3b82f6','#f97316','#22c55e','#a855f7','#ef4444','#eab308','#ec4899','#14b8a6','#64748b','#94a3b8']
 const CATEGORIES = ['alimentation','restauration','transport','logement','sante','loisirs','habillement','education','services','autre']
 
-export default function Accueil({ month, filter }) {
-  const [expenses, set_expenses] = useState([])
-  const [loading, set_loading] = useState(true)
+export default function Accueil({ expenses, loading }) {
   const [budget, set_budget] = useState(() => Number(localStorage.getItem(BUDGET_KEY)) || DEFAULT_BUDGET)
   const [editing_budget, set_editing_budget] = useState(false)
   const [budget_input, set_budget_input] = useState('')
   const chart_ref = useRef(null)
   const chart_instance = useRef(null)
-
-  const fetch_data = async () => {
-    const { from, to } = monthRange(month)
-    let q = supabase.from('expenses').select('*').gte('date', from).lte('date', to)
-    if (filter !== 'tous') q = q.eq('paid_by', filter)
-    const { data } = await q
-    set_expenses(data || [])
-    set_loading(false)
-  }
-
-  useEffect(() => {
-    set_loading(true)
-    fetch_data()
-    const interval = setInterval(fetch_data, 10000)
-    return () => clearInterval(interval)
-  }, [month, filter])
 
   const total = expenses.reduce((s, e) => s + Number(e.amount), 0)
   const nb = expenses.length
