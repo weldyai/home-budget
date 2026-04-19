@@ -114,7 +114,7 @@ export default function Depenses({ month, expenses, loading, refresh }) {
                 <div className="expense-icon" style={{ background: icon.bg }}>{icon.emoji}</div>
                 <div className="expense-body">
                   <div className="expense-desc">{e.description || e.category}</div>
-                  <div className="expense-meta">{e.date} · {e.category} · {e.paid_by === 'brahim' ? 'Moi' : 'Femme'}</div>
+                  <div className="expense-meta">{e.date} {e.created_at ? new Date(e.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' }) : ''} · {e.category} · {e.paid_by === 'brahim' ? 'Moi' : 'Femme'}</div>
                 </div>
                 <div className="expense-right">
                   <div className="expense-amount">{Number(e.amount).toFixed(0)} MAD</div>
