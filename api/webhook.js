@@ -11,38 +11,18 @@ const BRAHIM_ID = ALLOWED_IDS[0];
 const EMOJI = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
 
 const SYSTEM_PROMPT = `Tu es un classificateur de dépenses pour un budget familial marocain.
-Analyse le message et retourne UNIQUEMENT un tableau JSON. Chaque ligne ou item du message est une dépense séparée.
-
-RÈGLE CRITIQUE : Si le message contient plusieurs dépenses (une par ligne, séparées par virgule, "et", "plus", etc.), chaque dépense DOIT être un objet séparé dans le tableau. Ne jamais additionner les montants ni ignorer une dépense.
-
-Exemple pour "Dépense 1: burger 86\nDépense 2: bouteille d'eau 8" :
-[
-  {"amount":86,"currency":"MAD","category":"restauration","subcategory":null,"description":"burger","paid_by":"unknown","paid_for":"both","date":"YYYY-MM-DD","confidence":0.95},
-  {"amount":8,"currency":"MAD","category":"alimentation","subcategory":null,"description":"bouteille d'eau","paid_by":"unknown","paid_for":"both","date":"YYYY-MM-DD","confidence":0.95}
-]
-
-Champs pour chaque objet :
+Analyse le message et retourne UNIQUEMENT un objet JSON valide avec ces champs :
 {"amount":<décimal>,"currency":"MAD|EUR|USD","category":"<cat>","subcategory":"<str|null>","description":"<str>","paid_by":"brahim|wife|unknown","paid_for":"brahim|wife|both","date":"YYYY-MM-DD","confidence":<0-1>}
 Catégories : alimentation, restauration, transport, logement, sante, loisirs, habillement, education, services, autre
 Règles : currency par défaut MAD, date par défaut aujourd'hui, paid_for par défaut both.
-Réponds UNIQUEMENT avec le tableau JSON, aucun texte avant ou après.`;
+Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après.`;
 
-function formatMessage(message) {
-  const lines = message.split("\n").map(l => l.trim()).filter(Boolean);
-  if (lines.length > 1) {
-    return lines.map((l, i) => `Dépense ${i + 1}: ${l}`).join("\n");
-  }
-  return message;
-}
-
-async function classify(message, today) {
+async function classifyOne(message, today) {
   const models = [
     "llama-3.3-70b-versatile",
     "llama-3.1-70b-versatile",
     "mixtral-8x7b-32768",
   ];
-
-  const formattedMessage = formatMessage(message);
 
   for (const model of models) {
     try {
@@ -56,10 +36,10 @@ async function classify(message, today) {
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `Date: ${today}\n\nMessage:\n${formattedMessage}` },
+            { role: "user", content: `Date: ${today}\n\nMessage: ${message}` },
           ],
           temperature: 0.1,
-          max_tokens: 600,
+          max_tokens: 300,
         }),
       });
 
@@ -70,18 +50,24 @@ async function classify(message, today) {
 
       const data = await res.json();
       let content = data.choices[0].message.content.trim();
-      console.log(`[classify] ${model} raw:`, content);
       if (content.startsWith("```")) {
         content = content.split("\n").slice(1, -1).join("\n");
       }
-      const parsed = JSON.parse(content);
-      return Array.isArray(parsed) ? parsed : [parsed];
+      return JSON.parse(content);
     } catch (e) {
       console.error(`[classify] ${model} error:`, e.message);
       continue;
     }
   }
   throw new Error("Classification impossible");
+}
+
+async function classify(message, today) {
+  const lines = message.split("\n").map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    return Promise.all(lines.map(line => classifyOne(line, today)));
+  }
+  return [await classifyOne(message, today)];
 }
 
 async function telegramRequest(method, body) {
