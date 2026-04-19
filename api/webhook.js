@@ -11,21 +11,29 @@ const BRAHIM_ID = ALLOWED_IDS[0];
 const EMOJI = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
 
 const SYSTEM_PROMPT = `Tu es un classificateur de dépenses pour un budget familial marocain.
-Analyse le message et retourne UNIQUEMENT un objet JSON valide avec ces champs :
-{
-  "amount": <nombre décimal>,
-  "currency": "<MAD|EUR|USD>",
-  "category": "<catégorie>",
-  "subcategory": "<sous-catégorie ou null>",
-  "description": "<description courte>",
-  "paid_by": "<brahim|wife|unknown>",
-  "paid_for": "<brahim|wife|both>",
-  "date": "<YYYY-MM-DD>",
-  "confidence": <0.0 à 1.0>
-}
+Analyse le message et retourne UNIQUEMENT un tableau JSON. Chaque ligne ou item du message est une dépense séparée.
+
+RÈGLE CRITIQUE : Si le message contient plusieurs dépenses (une par ligne, séparées par virgule, "et", "plus", etc.), chaque dépense DOIT être un objet séparé dans le tableau. Ne jamais additionner les montants ni ignorer une dépense.
+
+Exemple pour "Dépense 1: burger 86\nDépense 2: bouteille d'eau 8" :
+[
+  {"amount":86,"currency":"MAD","category":"restauration","subcategory":null,"description":"burger","paid_by":"unknown","paid_for":"both","date":"YYYY-MM-DD","confidence":0.95},
+  {"amount":8,"currency":"MAD","category":"alimentation","subcategory":null,"description":"bouteille d'eau","paid_by":"unknown","paid_for":"both","date":"YYYY-MM-DD","confidence":0.95}
+]
+
+Champs pour chaque objet :
+{"amount":<décimal>,"currency":"MAD|EUR|USD","category":"<cat>","subcategory":"<str|null>","description":"<str>","paid_by":"brahim|wife|unknown","paid_for":"brahim|wife|both","date":"YYYY-MM-DD","confidence":<0-1>}
 Catégories : alimentation, restauration, transport, logement, sante, loisirs, habillement, education, services, autre
 Règles : currency par défaut MAD, date par défaut aujourd'hui, paid_for par défaut both.
-Réponds UNIQUEMENT avec le JSON, aucun texte avant ou après.`;
+Réponds UNIQUEMENT avec le tableau JSON, aucun texte avant ou après.`;
+
+function formatMessage(message) {
+  const lines = message.split("\n").map(l => l.trim()).filter(Boolean);
+  if (lines.length > 1) {
+    return lines.map((l, i) => `Dépense ${i + 1}: ${l}`).join("\n");
+  }
+  return message;
+}
 
 async function classify(message, today) {
   const models = [
@@ -33,6 +41,8 @@ async function classify(message, today) {
     "llama-3.1-70b-versatile",
     "mixtral-8x7b-32768",
   ];
+
+  const formattedMessage = formatMessage(message);
 
   for (const model of models) {
     try {
@@ -46,10 +56,10 @@ async function classify(message, today) {
           model,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `Date: ${today}\n\nMessage: ${message}` },
+            { role: "user", content: `Date: ${today}\n\nMessage:\n${formattedMessage}` },
           ],
           temperature: 0.1,
-          max_tokens: 300,
+          max_tokens: 600,
         }),
       });
 
@@ -60,10 +70,12 @@ async function classify(message, today) {
 
       const data = await res.json();
       let content = data.choices[0].message.content.trim();
+      console.log(`[classify] ${model} raw:`, content);
       if (content.startsWith("```")) {
         content = content.split("\n").slice(1, -1).join("\n");
       }
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [parsed];
     } catch (e) {
       console.error(`[classify] ${model} error:`, e.message);
       continue;
@@ -101,36 +113,37 @@ async function handleMessage(msg) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  let expense;
+  let expenses;
   try {
-    expense = await classify(text, today);
+    expenses = await classify(text, today);
   } catch (e) {
     console.error("[handleMessage] classify failed:", e.message);
     await sendMessage(chatId, `Erreur: ${e.message}`);
     return;
   }
 
-  if (expense.paid_by === "unknown") {
-    expense.paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
-  }
-
-  const icon = EMOJI[expense.category] || "💰";
-  const desc = (expense.description || expense.category).slice(0, 10);
-  // Format: ok|amount|currency|category|paid_by|paid_for|date|desc (max 64 bytes)
-  const cbData = `ok|${expense.amount}|${expense.currency || "MAD"}|${expense.category}|${expense.paid_by}|${expense.paid_for || "both"}|${expense.date || today}|${desc}`;
-
-  await sendMessage(
-    chatId,
-    `${icon} Confirmer cette dépense ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today}`,
-    {
-      reply_markup: {
-        inline_keyboard: [[
-          { text: "✅ Oui", callback_data: cbData },
-          { text: "❌ Non", callback_data: "no" },
-        ]],
-      },
+  for (const expense of expenses) {
+    if (expense.paid_by === "unknown") {
+      expense.paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
     }
-  );
+
+    const icon = EMOJI[expense.category] || "💰";
+    const desc = (expense.description || expense.category).slice(0, 10);
+    const cbData = `ok|${expense.amount}|${expense.currency || "MAD"}|${expense.category}|${expense.paid_by}|${expense.paid_for || "both"}|${expense.date || today}|${desc}`;
+
+    await sendMessage(
+      chatId,
+      `${icon} Confirmer cette dépense ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today}`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Oui", callback_data: cbData },
+            { text: "❌ Non", callback_data: "no" },
+          ]],
+        },
+      }
+    );
+  }
 }
 
 async function handleCallback(cq) {
