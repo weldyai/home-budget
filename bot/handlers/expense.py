@@ -4,7 +4,7 @@ from datetime import date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
-from bot.classifier import classify_expense, ParsedExpense
+from bot.classifier import classify_expenses, ParsedExpense
 from bot.config import settings
 from bot.database import save_expense
 
@@ -47,34 +47,46 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await update.message.chat.send_action("typing")
 
     try:
-        expense = await classify_expense(text, date.today())
+        expenses = await classify_expenses(text, date.today())
     except Exception as e:
         await update.message.reply_text(f"Erreur de classification : {e}")
         return
 
-    expense.paid_by = _get_paid_by(user_id) if expense.paid_by == "unknown" else expense.paid_by
+    for expense in expenses:
+        expense.paid_by = _get_paid_by(user_id) if expense.paid_by == "unknown" else expense.paid_by
 
-    if expense.confidence > 0.7:
-        try:
-            await save_expense(expense, text)
+    saved = []
+    for expense in expenses:
+        if expense.confidence > 0.7:
+            try:
+                await save_expense(expense, text)
+                saved.append(expense)
+            except Exception as e:
+                await update.message.reply_text(f"Erreur d'enregistrement : {e}")
+        else:
+            expense_json = expense.model_dump_json()
+            keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("Confirmer", callback_data=f"confirm:{expense_json}"),
+                    InlineKeyboardButton("Annuler", callback_data="cancel"),
+                ]
+            ])
             await update.message.reply_text(
-                f"Depense enregistree :\n{_format_expense_preview(expense)}"
+                f"Confiance faible ({expense.confidence:.0%}). Confirmer cette depense ?\n\n"
+                f"{_format_expense_preview(expense)}",
+                reply_markup=keyboard,
             )
-        except Exception as e:
-            await update.message.reply_text(f"Erreur d'enregistrement : {e}")
-    else:
-        expense_json = expense.model_dump_json()
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("Confirmer", callback_data=f"confirm:{expense_json}"),
-                InlineKeyboardButton("Annuler", callback_data="cancel"),
-            ]
-        ])
-        await update.message.reply_text(
-            f"Confiance faible ({expense.confidence:.0%}). Confirmer cette depense ?\n\n"
-            f"{_format_expense_preview(expense)}",
-            reply_markup=keyboard,
-        )
+
+    if saved:
+        if len(saved) == 1:
+            await update.message.reply_text(
+                f"Depense enregistree :\n{_format_expense_preview(saved[0])}"
+            )
+        else:
+            lines = [f"{len(saved)} depenses enregistrees :"]
+            for i, exp in enumerate(saved, 1):
+                lines.append(f"\n#{i} {_format_expense_preview(exp)}")
+            await update.message.reply_text("\n".join(lines))
 
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
