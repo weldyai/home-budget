@@ -97,7 +97,9 @@ async function handleMessage(msg) {
 
   if (!ALLOWED_IDS.includes(userId) || !text || text.startsWith("/")) return;
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
 
   let expenses;
   try {
@@ -119,7 +121,7 @@ async function handleMessage(msg) {
 
     await sendMessage(
       chatId,
-      `${icon} Confirmer cette dépense ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today}`,
+      `${icon} Confirmer cette dépense ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today} ${time}`,
       {
         reply_markup: {
           inline_keyboard: [[
