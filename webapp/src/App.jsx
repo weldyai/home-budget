@@ -7,9 +7,9 @@ import { supabase } from './lib/supabase'
 import { monthRange } from './lib/dates'
 import './index.css'
 
-const today = new Date()
+const today_date = new Date()
 const pad = n => String(n).padStart(2, '0')
-const current_month = `${today.getFullYear()}-${pad(today.getMonth() + 1)}`
+const current_month = `${today_date.getFullYear()}-${pad(today_date.getMonth() + 1)}`
 
 function prev_month(m) {
   const [y, mo] = m.split('-').map(Number)
@@ -24,12 +24,40 @@ function next_month(m) {
 }
 
 const MONTH_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+const format_month = m => { const [y, mo] = m.split('-').map(Number); return `${MONTH_FR[mo - 1]} ${y}` }
 
-function format_month(m) {
-  const [y, mo] = m.split('-').map(Number)
-  return `${MONTH_FR[mo - 1]} ${y}`
-}
+// ── THEMES ─────────────────────────────────────────────────────────────────
+const THEMES = [
+  {
+    id: 'nebula',
+    name: 'Nebula',
+    sub: 'Violet cosmique',
+    accent: '#7B3FE4',
+    accent2: '#9B6BFF',
+    bg: '#06060F',
+    card_grad: 'linear-gradient(145deg, #130D2A, #07070F)',
+  },
+  {
+    id: 'arctic',
+    name: 'Arctic',
+    sub: 'Bleu océan profond',
+    accent: '#0284C7',
+    accent2: '#38BDF8',
+    bg: '#04080F',
+    card_grad: 'linear-gradient(145deg, #091D30, #04080F)',
+  },
+  {
+    id: 'obsidian',
+    name: 'Obsidian',
+    sub: 'Noir & or',
+    accent: '#C9A227',
+    accent2: '#F0C040',
+    bg: '#070707',
+    card_grad: 'linear-gradient(145deg, #1A1406, #070707)',
+  },
+]
 
+// ── NAV ICONS ───────────────────────────────────────────────────────────────
 const VIEWS = [
   {
     id: 'accueil',
@@ -76,12 +104,61 @@ const VIEWS = [
   },
 ]
 
+// ── THEME PICKER MODAL ──────────────────────────────────────────────────────
+function ThemePicker({ current, on_select, on_close }) {
+  return (
+    <div className="modal-overlay" onClick={on_close}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="modal-handle" />
+        <div className="modal-title" style={{ marginBottom: '1rem' }}>Thème</div>
+        <div className="theme-cards">
+          {THEMES.map(t => (
+            <div
+              key={t.id}
+              className={`theme-card${current === t.id ? ' active' : ''}`}
+              style={{ background: t.card_grad, borderColor: current === t.id ? t.accent2 : 'rgba(255,255,255,0.06)' }}
+              onClick={() => { on_select(t.id); on_close() }}
+            >
+              {current === t.id && (
+                <div className="theme-check">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+              )}
+              {/* Mini preview */}
+              <div className="theme-preview" style={{ background: t.bg }}>
+                <div className="theme-preview-ring" style={{
+                  background: `conic-gradient(${t.accent} 0% 65%, rgba(255,255,255,0.08) 65% 100%)`,
+                  boxShadow: `0 0 10px ${t.accent}55`,
+                }} />
+              </div>
+              <div>
+                <div className="theme-name">{t.name}</div>
+                <div className="theme-sub">{t.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── APP ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, set_view] = useState('accueil')
   const [month, set_month] = useState(current_month)
   const [filter, set_filter] = useState('tous')
   const [expenses, set_expenses] = useState([])
   const [loading, set_loading] = useState(true)
+  const [theme, set_theme] = useState(() => localStorage.getItem('home_budget_theme') || 'nebula')
+  const [theme_open, set_theme_open] = useState(false)
+
+  const apply_theme = (t) => {
+    set_theme(t)
+    localStorage.setItem('home_budget_theme', t)
+  }
 
   const fetch_data = async () => {
     const { from, to } = monthRange(month)
@@ -111,7 +188,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       <header className="header">
         <div className="header-top">
           <div className="header-logo">
@@ -124,9 +201,18 @@ export default function App() {
             </div>
             <span className="header-title">Budget</span>
           </div>
-          <div className="live-badge">
-            <span className="live-dot" />
-            Live
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="live-badge">
+              <span className="live-dot" />
+              Live
+            </div>
+            <button className="theme-trigger" onClick={() => set_theme_open(true)} title="Changer de thème">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+              </svg>
+            </button>
           </div>
         </div>
         <div className="month-nav">
@@ -163,6 +249,14 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {theme_open && (
+        <ThemePicker
+          current={theme}
+          on_select={apply_theme}
+          on_close={() => set_theme_open(false)}
+        />
+      )}
     </div>
   )
 }
