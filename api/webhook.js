@@ -8,6 +8,131 @@ const supabase = createClient(
 const ALLOWED_IDS = process.env.ALLOWED_USER_IDS.split(",").map(Number);
 const BRAHIM_ID = ALLOWED_IDS[0];
 
+// ── VISION (photo/receipt OCR) ──────────────────────────────────────────────
+const VISION_MODELS = [
+  "qwen/qwen2.5-vl-72b-instruct:free",
+  "meta-llama/llama-3.2-11b-vision-instruct:free",
+];
+
+const VISION_PROMPT = `Tu es un expert en lecture de tickets de caisse et factures marocains.
+Analyse l'image et retourne UNIQUEMENT un tableau JSON des dépenses détectées.
+
+Règles:
+- Ticket de courses (supermarché, épicerie, pharmacie) → UNE dépense avec le montant TOTAL et le nom du magasin comme description
+- Restaurant, café → UNE dépense avec le total et le nom de l'établissement
+- Facture avec articles de catégories clairement différentes → plusieurs dépenses séparées
+- Si montant illisible ou image floue → confidence < 0.5
+
+Format tableau JSON:
+[{"amount":<décimal>,"currency":"MAD","category":"<cat>","description":"<magasin ou article>","paid_by":"unknown","paid_for":"both","date":"YYYY-MM-DD","confidence":<0.0-1.0>}]
+
+Catégories disponibles: alimentation, restauration, transport, logement, sante, loisirs, habillement, education, services, autre
+Réponds UNIQUEMENT avec le tableau JSON, aucun texte avant ou après.`;
+
+async function get_telegram_file_url(file_id) {
+  const res = await fetch(
+    `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/getFile?file_id=${file_id}`
+  );
+  const data = await res.json();
+  return `https://api.telegram.org/file/bot${process.env.TELEGRAM_TOKEN}/${data.result.file_path}`;
+}
+
+async function extract_from_image(image_url, today) {
+  const img_res = await fetch(image_url);
+  const buffer = await img_res.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const mime = image_url.toLowerCase().includes(".png") ? "image/png" : "image/jpeg";
+
+  for (const model of VISION_MODELS) {
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://github.com/home-budget-agent",
+          "X-Title": "Home Budget Agent",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: `data:${mime};base64,${base64}` } },
+              { type: "text", text: `Date d'aujourd'hui: ${today}\n\n${VISION_PROMPT}` },
+            ],
+          }],
+          temperature: 0.1,
+          max_tokens: 600,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(`[vision] ${model} → ${res.status}: ${await res.text()}`);
+        continue;
+      }
+
+      const data = await res.json();
+      let content = data.choices[0].message.content.trim();
+      if (content.startsWith("```")) {
+        content = content.split("\n").slice(1, -1).join("\n");
+      }
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      console.error(`[vision] ${model}:`, e.message);
+      continue;
+    }
+  }
+  throw new Error("Impossible d'analyser l'image");
+}
+
+async function handlePhoto(msg) {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+  if (!ALLOWED_IDS.includes(userId)) return;
+
+  const photo = msg.photo[msg.photo.length - 1];
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const time = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Casablanca" });
+
+  await sendMessage(chatId, "🔍 Analyse du ticket en cours...");
+
+  let expenses;
+  try {
+    const file_url = await get_telegram_file_url(photo.file_id);
+    expenses = await extract_from_image(file_url, today);
+  } catch (e) {
+    console.error("[handlePhoto] vision failed:", e.message);
+    await sendMessage(chatId, `❌ Impossible d'analyser l'image: ${e.message}`);
+    return;
+  }
+
+  for (const expense of expenses) {
+    if (expense.paid_by === "unknown") {
+      expense.paid_by = userId === BRAHIM_ID ? "brahim" : "wife";
+    }
+
+    const icon = EMOJI[expense.category] || "💰";
+    const desc = (expense.description || expense.category).slice(0, 20);
+    const cb_data = `ok|${expense.amount}|${expense.currency || "MAD"}|${expense.category}|${expense.paid_by}|${expense.paid_for || "both"}|${expense.date || today}|${desc}`;
+
+    await sendMessage(
+      chatId,
+      `${icon} Ticket détecté — confirmer ?\n\n${expense.amount} ${expense.currency || "MAD"} — ${expense.description}\nCatégorie : ${expense.category}\nConfiance : ${(expense.confidence * 100).toFixed(0)}%\nPayé par : ${expense.paid_by}\nDate : ${expense.date || today} ${time}`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Oui", callback_data: cb_data },
+            { text: "❌ Non", callback_data: "no" },
+          ]],
+        },
+      }
+    );
+  }
+}
+
 const EMOJI = { alimentation: "🛒", restauration: "🍽️", transport: "🚗", logement: "🏠", sante: "💊", loisirs: "🎬", habillement: "👗", education: "📚", services: "📱", autre: "💰" };
 
 const SYSTEM_PROMPT = `Tu es un classificateur de dépenses pour un budget familial marocain.
@@ -295,7 +420,9 @@ export default async function handler(req, res) {
       await handleCallback(callback_query);
     } else if (message?.text?.startsWith("/")) {
       await handleCommand(message);
-    } else if (message) {
+    } else if (message?.photo) {
+      await handlePhoto(message);
+    } else if (message?.text) {
       await handleMessage(message);
     }
   } catch (e) {

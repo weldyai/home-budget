@@ -23,6 +23,13 @@ function next_month(m) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
 }
 
+const MONTH_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+
+function format_month(m) {
+  const [y, mo] = m.split('-').map(Number)
+  return `${MONTH_FR[mo - 1]} ${y}`
+}
+
 const VIEWS = [
   {
     id: 'accueil',
@@ -95,11 +102,11 @@ export default function App() {
   const render_view = () => {
     const props = { month, filter, expenses, loading, refresh: fetch_data }
     switch (view) {
-      case 'accueil': return <Accueil {...props} />
-      case 'depenses': return <Depenses {...props} />
+      case 'accueil':    return <Accueil {...props} />
+      case 'depenses':   return <Depenses {...props} />
       case 'calendrier': return <Calendrier {...props} />
-      case 'analyse': return <Analyse {...props} />
-      default: return null
+      case 'analyse':    return <Analyse {...props} />
+      default:           return null
     }
   }
 
@@ -107,7 +114,16 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="header-top">
-          <div className="header-title">💰 Budget</div>
+          <div className="header-logo">
+            <div className="header-logo-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+              </svg>
+            </div>
+            <span className="header-title">Budget</span>
+          </div>
           <div className="live-badge">
             <span className="live-dot" />
             Live
@@ -115,7 +131,7 @@ export default function App() {
         </div>
         <div className="month-nav">
           <button onClick={() => set_month(prev_month(month))}>‹</button>
-          <span className="month-label">{month}</span>
+          <span className="month-label">{format_month(month)}</span>
           <button onClick={() => set_month(next_month(month))}>›</button>
         </div>
         <div className="filter-bar">
