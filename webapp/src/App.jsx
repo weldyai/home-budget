@@ -55,6 +55,16 @@ const THEMES = [
     bg: '#070707',
     card_grad: 'linear-gradient(145deg, #1A1406, #070707)',
   },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    sub: 'Iridescent · Holographique',
+    accent: '#A855F7',
+    accent2: '#22D3EE',
+    bg: '#03040A',
+    card_grad: 'linear-gradient(145deg, #0D0A18, #03040A)',
+    aurora: true,
+  },
 ]
 
 // ── NAV ICONS ───────────────────────────────────────────────────────────────
@@ -105,6 +115,18 @@ const VIEWS = [
 ]
 
 // ── THEME PICKER MODAL ──────────────────────────────────────────────────────
+function AuroraRing() {
+  return (
+    <div style={{
+      width: 28, height: 28,
+      borderRadius: '50%',
+      background: 'conic-gradient(#FF6B9D 0%, #A855F7 25%, #22D3EE 55%, #10D9A0 75%, #FF6B9D 100%)',
+      boxShadow: '0 0 14px rgba(168,85,247,0.7), 0 0 6px rgba(34,211,238,0.5)',
+      animation: 'aurora-ring-spin 4s linear infinite',
+    }} />
+  )
+}
+
 function ThemePicker({ current, on_select, on_close }) {
   return (
     <div className="modal-overlay" onClick={on_close}>
@@ -116,7 +138,16 @@ function ThemePicker({ current, on_select, on_close }) {
             <div
               key={t.id}
               className={`theme-card${current === t.id ? ' active' : ''}`}
-              style={{ background: t.card_grad, borderColor: current === t.id ? t.accent2 : 'rgba(255,255,255,0.06)' }}
+              style={{
+                background: t.aurora && current === t.id
+                  ? 'linear-gradient(135deg, #FF6B9D, #A855F7, #22D3EE, #10D9A0, #FF6B9D)'
+                  : t.card_grad,
+                backgroundSize: t.aurora && current === t.id ? '300% 300%' : undefined,
+                animation: t.aurora && current === t.id ? 'aurora-flow 4s ease infinite' : undefined,
+                borderColor: current === t.id
+                  ? (t.aurora ? 'rgba(168,85,247,0.6)' : t.accent2)
+                  : 'rgba(255,255,255,0.06)',
+              }}
               onClick={() => { on_select(t.id); on_close() }}
             >
               {current === t.id && (
@@ -126,12 +157,16 @@ function ThemePicker({ current, on_select, on_close }) {
                   </svg>
                 </div>
               )}
-              {/* Mini preview */}
               <div className="theme-preview" style={{ background: t.bg }}>
-                <div className="theme-preview-ring" style={{
-                  background: `conic-gradient(${t.accent} 0% 65%, rgba(255,255,255,0.08) 65% 100%)`,
-                  boxShadow: `0 0 10px ${t.accent}55`,
-                }} />
+                {t.aurora
+                  ? <AuroraRing />
+                  : (
+                    <div className="theme-preview-ring" style={{
+                      background: `conic-gradient(${t.accent} 0% 65%, rgba(255,255,255,0.08) 65% 100%)`,
+                      boxShadow: `0 0 10px ${t.accent}55`,
+                    }} />
+                  )
+                }
               </div>
               <div>
                 <div className="theme-name">{t.name}</div>

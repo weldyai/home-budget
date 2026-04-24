@@ -922,6 +922,11 @@ html, body, #root {
   line-height: 1.3;
 }
 
+@keyframes aurora-ring-spin {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+
 .theme-check {
   position: absolute;
   top: 6px; right: 6px;
@@ -929,4 +934,123 @@ html, body, #root {
   border-radius: 50%;
   background: rgba(255,255,255,0.9);
   display: flex; align-items: center; justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   THÈME 4 — AURORA  (iridescent holographique, mesh gradient animé)
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="aurora"] {
+  --bg:            #03040A;
+  --surface:       #070810;
+  --surface2:      #0B0D18;
+  --surface3:      #101322;
+  --border:        rgba(255,255,255,0.05);
+  --border2:       rgba(255,255,255,0.09);
+  --muted:         #4A5070;
+  --muted2:        #353850;
+  --accent:        #A855F7;
+  --accent2:       #22D3EE;
+  --accent-glow:   rgba(168,85,247,0.22);
+  --green:         #10D9A0;
+  --red:           #FF3B5C;
+  --orange:        #FF9F00;
+  --gradient:         linear-gradient(135deg, #FF6B9D 0%, #A855F7 35%, #22D3EE 70%, #10D9A0 100%);
+  --gradient-subtle:  linear-gradient(135deg, rgba(255,107,157,0.1) 0%, rgba(168,85,247,0.1) 50%, rgba(34,211,238,0.08) 100%);
+  --gradient-green:   linear-gradient(135deg, #10D9A0, #06B6D4);
+  --gradient-red:     linear-gradient(135deg, #FF3B5C, #FF6B35);
+  --gradient-card:    linear-gradient(145deg, #0D0A18 0%, #080818 50%, #03040A 100%);
+}
+
+/* Hero card : border + glow qui tournent en couleur */
+[data-theme="aurora"] .hero-card {
+  border-color: rgba(168,85,247,0.3);
+  animation: aurora-glow 7s ease-in-out infinite;
+}
+
+@keyframes aurora-glow {
+  0%,100% {
+    box-shadow: 0 20px 60px rgba(168,85,247,0.4), 0 0 0 1px rgba(168,85,247,0.12) inset;
+    border-color: rgba(168,85,247,0.3);
+  }
+  33% {
+    box-shadow: 0 20px 60px rgba(34,211,238,0.35), 0 0 0 1px rgba(34,211,238,0.1) inset;
+    border-color: rgba(34,211,238,0.28);
+  }
+  66% {
+    box-shadow: 0 20px 60px rgba(255,107,157,0.35), 0 0 0 1px rgba(255,107,157,0.1) inset;
+    border-color: rgba(255,107,157,0.28);
+  }
+}
+
+/* Ambient glow du hero card qui change de couleur */
+[data-theme="aurora"] .hero-card::before {
+  animation: aurora-before 7s ease-in-out infinite;
+}
+
+@keyframes aurora-before {
+  0%,100% { background: radial-gradient(circle, rgba(168,85,247,0.2) 0%, transparent 70%); }
+  33%      { background: radial-gradient(circle, rgba(34,211,238,0.18) 0%, transparent 70%); }
+  66%      { background: radial-gradient(circle, rgba(255,107,157,0.18) 0%, transparent 70%); }
+}
+
+/* Logo header : gradient animé */
+[data-theme="aurora"] .header-logo-icon {
+  background: linear-gradient(135deg, #FF6B9D, #A855F7, #22D3EE, #10D9A0);
+  background-size: 300% 300%;
+  animation: aurora-flow 6s ease infinite;
+  box-shadow: 0 2px 16px rgba(168,85,247,0.5);
+}
+
+/* Tous les éléments actifs avec gradient animé flowing */
+[data-theme="aurora"] .filter-pill.active,
+[data-theme="aurora"] .btn-primary,
+[data-theme="aurora"] .nav-btn.active {
+  background: linear-gradient(135deg, #FF6B9D, #A855F7, #22D3EE, #10D9A0, #FF6B9D);
+  background-size: 300% 300%;
+  animation: aurora-flow 6s ease infinite;
+  border-color: transparent;
+}
+
+[data-theme="aurora"] .btn-primary {
+  box-shadow: 0 4px 24px rgba(168,85,247,0.4);
+}
+
+[data-theme="aurora"] .nav-btn.active {
+  box-shadow: 0 4px 20px rgba(168,85,247,0.35);
+}
+
+@keyframes aurora-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Form focus avec glow iridescent */
+[data-theme="aurora"] .form-input:focus,
+[data-theme="aurora"] .form-select:focus {
+  border-color: #A855F7;
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.2);
+}
+
+/* Nav month boutons hover */
+[data-theme="aurora"] .month-nav button:hover {
+  background: linear-gradient(135deg, #A855F7, #22D3EE);
+  border-color: transparent;
+  box-shadow: 0 0 14px rgba(168,85,247,0.4);
+}
+
+/* Today calendar cell */
+[data-theme="aurora"] .cal-day.today {
+  border-color: #A855F7;
+  box-shadow: 0 0 12px rgba(168,85,247,0.4);
+}
+
+/* Particule flottante en arrière-plan du hero (aurora shimmer) */
+[data-theme="aurora"] .hero-card::after {
+  animation: aurora-after 9s ease-in-out infinite reverse;
+}
+
+@keyframes aurora-after {
+  0%,100% { background: radial-gradient(circle, rgba(16,217,160,0.1) 0%, transparent 70%); }
+  50%      { background: radial-gradient(circle, rgba(255,107,157,0.12) 0%, transparent 70%); }
 }
