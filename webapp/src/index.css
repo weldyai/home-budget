@@ -922,6 +922,178 @@ html, body, #root {
   line-height: 1.3;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   THÈME 5 — GRAPHITE  (monochrome éditorial, grain film, clair/sombre)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Mode sombre (défaut) ── */
+[data-theme="mono"] {
+  --bg:            #080808;
+  --surface:       #101010;
+  --surface2:      #181818;
+  --surface3:      #222222;
+  --border:        rgba(255,255,255,0.07);
+  --border2:       rgba(255,255,255,0.12);
+  --text:          #F0EFE8;
+  --muted:         #666660;
+  --muted2:        #444440;
+  --accent:        #E8E8E4;
+  --accent2:       #FFFFFF;
+  --accent-glow:   rgba(240,239,232,0.1);
+  --green:         #9FADA0;
+  --red:           #C87070;
+  --orange:        #B89060;
+  --gradient:         linear-gradient(135deg, #D4D4D0, #FFFFFF);
+  --gradient-subtle:  linear-gradient(135deg, rgba(212,212,208,0.1), rgba(255,255,255,0.06));
+  --gradient-green:   linear-gradient(135deg, #9FADA0, #C0C8C0);
+  --gradient-red:     linear-gradient(135deg, #C87070, #D49090);
+  --gradient-card:    linear-gradient(145deg, #1C1C1C 0%, #101010 50%, #080808 100%);
+}
+
+/* Grain film sur toute l'app */
+[data-theme="mono"] .app::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9998;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+
+/* Icônes catégorie → grayscale */
+[data-theme="mono"] .cat-icon { filter: grayscale(1); }
+
+/* Ring progress → grayscale */
+[data-theme="mono"] .hero-ring-wrap svg { filter: grayscale(1) brightness(1.1); }
+
+/* Charts → grayscale */
+[data-theme="mono"] .chart-wrap canvas,
+[data-theme="mono"] .donut-wrap canvas { filter: grayscale(0.9); }
+
+/* Hero card sombre : embossing subtil, pas de glow couleur */
+[data-theme="mono"] .hero-card {
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow:
+    0 1px 1px rgba(255,255,255,0.04) inset,
+    0 20px 50px rgba(0,0,0,0.7);
+}
+[data-theme="mono"] .hero-card::before { background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%); }
+[data-theme="mono"] .hero-card::after  { background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%); }
+
+/* Cards avec embossing léger */
+[data-theme="mono"] .card {
+  box-shadow: 1px 1px 2px rgba(255,255,255,0.03), -1px -1px 3px rgba(0,0,0,0.6);
+}
+
+/* Boutons avec texte sombre (fond blanc/gris clair) */
+[data-theme="mono"] .btn-primary          { box-shadow: 0 4px 18px rgba(255,255,255,0.12); color: #0A0A08; }
+[data-theme="mono"] .filter-pill.active   { color: #0A0A08; }
+[data-theme="mono"] .nav-btn.active       { color: #0A0A08; box-shadow: 0 4px 16px rgba(255,255,255,0.1); }
+
+/* Live badge monochrome */
+[data-theme="mono"] .live-badge { color: var(--text); background: var(--surface2); border-color: var(--border2); }
+[data-theme="mono"] .live-dot   { background: var(--text); box-shadow: none; }
+
+/* ── Mode clair ── */
+[data-theme="mono"][data-mono-mode="light"] {
+  --bg:            #F2F1EC;
+  --surface:       #FAFAF7;
+  --surface2:      #EEEEE8;
+  --surface3:      #E4E4DC;
+  --border:        rgba(0,0,0,0.07);
+  --border2:       rgba(0,0,0,0.11);
+  --text:          #0A0A08;
+  --muted:         #888880;
+  --muted2:        #AAAAAA;
+  --accent:        #1A1A18;
+  --accent2:       #404040;
+  --accent-glow:   rgba(0,0,0,0.1);
+  --green:         #2D6E50;
+  --red:           #A83030;
+  --orange:        #8A5A20;
+  --gradient:         linear-gradient(135deg, #1A1A18, #404040);
+  --gradient-subtle:  linear-gradient(135deg, rgba(26,26,24,0.08), rgba(64,64,64,0.05));
+  --gradient-green:   linear-gradient(135deg, #2D6E50, #1A8060);
+  --gradient-red:     linear-gradient(135deg, #A83030, #C04040);
+  --gradient-card:    linear-gradient(145deg, #FFFFFF 0%, #F5F4EF 100%);
+}
+
+[data-theme="mono"][data-mono-mode="light"] .app::before { opacity: 0.022; }
+
+[data-theme="mono"][data-mono-mode="light"] .hero-card {
+  border: 1px solid rgba(0,0,0,0.09);
+  box-shadow:
+    6px 6px 20px rgba(0,0,0,0.08),
+    -3px -3px 10px rgba(255,255,255,0.85),
+    0 2px 6px rgba(0,0,0,0.06);
+}
+[data-theme="mono"][data-mono-mode="light"] .hero-card::before { background: radial-gradient(circle, rgba(0,0,0,0.03) 0%, transparent 70%); }
+[data-theme="mono"][data-mono-mode="light"] .hero-card::after  { background: none; }
+
+[data-theme="mono"][data-mono-mode="light"] .card {
+  box-shadow:
+    4px 4px 14px rgba(0,0,0,0.07),
+    -2px -2px 8px rgba(255,255,255,0.9),
+    0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Header et nav en mode clair */
+[data-theme="mono"][data-mono-mode="light"] .header {
+  background: rgba(242,241,236,0.88);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+
+[data-theme="mono"][data-mono-mode="light"] .nav-bottom {
+  background: rgba(250,250,247,0.95);
+  border: 1px solid rgba(0,0,0,0.09);
+  box-shadow:
+    0 -2px 12px rgba(0,0,0,0.06),
+    4px 4px 20px rgba(0,0,0,0.08),
+    -2px -2px 8px rgba(255,255,255,0.7);
+}
+
+/* Boutons mode clair : fond sombre → texte blanc */
+[data-theme="mono"][data-mono-mode="light"] .btn-primary          { color: #F2F1EC; box-shadow: 0 4px 18px rgba(0,0,0,0.2); }
+[data-theme="mono"][data-mono-mode="light"] .filter-pill.active   { color: #F2F1EC; }
+[data-theme="mono"][data-mono-mode="light"] .nav-btn.active       { color: #F2F1EC; box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+
+/* Form inputs en mode clair */
+[data-theme="mono"][data-mono-mode="light"] .form-input,
+[data-theme="mono"][data-mono-mode="light"] .form-select {
+  background: #FAFAF7;
+  color: #0A0A08;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.06), -1px -1px 4px rgba(255,255,255,0.8);
+}
+[data-theme="mono"][data-mono-mode="light"] .form-input:focus,
+[data-theme="mono"][data-mono-mode="light"] .form-select:focus {
+  border-color: #1A1A18;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.09);
+}
+
+/* Month nav hover */
+[data-theme="mono"][data-mono-mode="light"] .month-nav button:hover {
+  background: #1A1A18;
+  border-color: #1A1A18;
+  color: #F2F1EC;
+  box-shadow: none;
+}
+
+/* Today cell */
+[data-theme="mono"][data-mono-mode="light"] .cal-day.today {
+  border-color: #1A1A18;
+  box-shadow: 0 0 8px rgba(0,0,0,0.15);
+}
+
+/* Charts mode clair légèrement désaturés */
+[data-theme="mono"][data-mono-mode="light"] .chart-wrap canvas,
+[data-theme="mono"][data-mono-mode="light"] .donut-wrap canvas { filter: grayscale(0.7) contrast(0.9); }
+
+/* Logo header mode clair */
+[data-theme="mono"][data-mono-mode="light"] .header-logo-icon {
+  background: linear-gradient(135deg, #1A1A18, #404040);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
 @keyframes aurora-ring-spin {
   from { filter: hue-rotate(0deg); }
   to   { filter: hue-rotate(360deg); }

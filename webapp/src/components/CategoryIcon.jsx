@@ -69,7 +69,7 @@ export function CategoryIcon({ category, size = 42 }) {
   const cfg = CATEGORY_CONFIG[category] || CATEGORY_CONFIG.autre
   const iconSize = Math.round(size * 0.48)
   return (
-    <div style={{
+    <div className="cat-icon" style={{
       width: size, height: size,
       borderRadius: Math.round(size * 0.3),
       background: cfg.bg,

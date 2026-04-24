@@ -65,6 +65,18 @@ const THEMES = [
     card_grad: 'linear-gradient(145deg, #0D0A18, #03040A)',
     aurora: true,
   },
+  {
+    id: 'mono',
+    name: 'Graphite',
+    sub: 'Monochrome · Éditorial',
+    accent: '#E8E8E4',
+    accent2: '#FFFFFF',
+    bg: '#080808',
+    bg_light: '#F2F1EC',
+    card_grad: 'linear-gradient(145deg, #1C1C1C, #080808)',
+    card_grad_light: 'linear-gradient(145deg, #FFFFFF, #F2F1EC)',
+    mono: true,
+  },
 ]
 
 // ── NAV ICONS ───────────────────────────────────────────────────────────────
@@ -115,6 +127,22 @@ const VIEWS = [
 ]
 
 // ── THEME PICKER MODAL ──────────────────────────────────────────────────────
+function MonoPreview() {
+  return (
+    <div className="theme-preview" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100%', display: 'flex', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ flex: 1, background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(240,239,232,0.9)' }} />
+        </div>
+        <div style={{ width: 1, background: 'rgba(128,128,128,0.25)' }} />
+        <div style={{ flex: 1, background: '#F2F1EC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(10,10,8,0.8)' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AuroraRing() {
   return (
     <div style={{
@@ -157,17 +185,19 @@ function ThemePicker({ current, on_select, on_close }) {
                   </svg>
                 </div>
               )}
+              {t.mono ? <MonoPreview /> : (
               <div className="theme-preview" style={{ background: t.bg }}>
                 {t.aurora
-                  ? <AuroraRing />
-                  : (
-                    <div className="theme-preview-ring" style={{
-                      background: `conic-gradient(${t.accent} 0% 65%, rgba(255,255,255,0.08) 65% 100%)`,
-                      boxShadow: `0 0 10px ${t.accent}55`,
-                    }} />
-                  )
+                    ? <AuroraRing />
+                    : (
+                      <div className="theme-preview-ring" style={{
+                        background: `conic-gradient(${t.accent} 0% 65%, rgba(255,255,255,0.08) 65% 100%)`,
+                        boxShadow: `0 0 10px ${t.accent}55`,
+                      }} />
+                    )
                 }
               </div>
+              )}
               <div>
                 <div className="theme-name">{t.name}</div>
                 <div className="theme-sub">{t.sub}</div>
@@ -188,11 +218,18 @@ export default function App() {
   const [expenses, set_expenses] = useState([])
   const [loading, set_loading] = useState(true)
   const [theme, set_theme] = useState(() => localStorage.getItem('home_budget_theme') || 'nebula')
+  const [mono_mode, set_mono_mode] = useState(() => localStorage.getItem('home_budget_mono_mode') || 'dark')
   const [theme_open, set_theme_open] = useState(false)
 
   const apply_theme = (t) => {
     set_theme(t)
     localStorage.setItem('home_budget_theme', t)
+  }
+
+  const toggle_mono_mode = () => {
+    const next = mono_mode === 'dark' ? 'light' : 'dark'
+    set_mono_mode(next)
+    localStorage.setItem('home_budget_mono_mode', next)
   }
 
   const fetch_data = async () => {
@@ -223,7 +260,7 @@ export default function App() {
   }
 
   return (
-    <div className="app" data-theme={theme}>
+    <div className="app" data-theme={theme} data-mono-mode={theme === 'mono' ? mono_mode : undefined}>
       <header className="header">
         <div className="header-top">
           <div className="header-logo">
@@ -241,6 +278,27 @@ export default function App() {
               <span className="live-dot" />
               Live
             </div>
+            {theme === 'mono' && (
+              <button className="theme-trigger" onClick={toggle_mono_mode} title={mono_mode === 'dark' ? 'Mode clair' : 'Mode sombre'}>
+                {mono_mode === 'dark' ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                  </svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                  </svg>
+                )}
+              </button>
+            )}
             <button className="theme-trigger" onClick={() => set_theme_open(true)} title="Changer de thème">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
