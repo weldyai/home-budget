@@ -10,8 +10,9 @@ const BRAHIM_ID = ALLOWED_IDS[0];
 
 // ── VISION (photo/receipt OCR) ──────────────────────────────────────────────
 const VISION_MODELS = [
-  "qwen/qwen2.5-vl-72b-instruct:free",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "llama-3.2-90b-vision-preview",
+  "llama-3.2-11b-vision-preview",
 ];
 
 const VISION_PROMPT = `Tu es un expert en lecture de tickets de caisse et factures marocains.
@@ -39,19 +40,18 @@ async function get_telegram_file_url(file_id) {
 
 async function extract_from_image(image_url, today) {
   const img_res = await fetch(image_url);
+  if (!img_res.ok) throw new Error(`Telegram file fetch failed: ${img_res.status}`);
   const buffer = await img_res.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
   const mime = image_url.toLowerCase().includes(".png") ? "image/png" : "image/jpeg";
 
   for (const model of VISION_MODELS) {
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": "https://github.com/home-budget-agent",
-          "X-Title": "Home Budget Agent",
         },
         body: JSON.stringify({
           model,
@@ -75,7 +75,7 @@ async function extract_from_image(image_url, today) {
       const data = await res.json();
       let content = data.choices[0].message.content.trim();
       if (content.startsWith("```")) {
-        content = content.split("\n").slice(1, -1).join("\n");
+        content = content.replace(/^```[a-z]*\n?/, "").replace(/\n?```$/, "");
       }
       const parsed = JSON.parse(content);
       return Array.isArray(parsed) ? parsed : [parsed];
