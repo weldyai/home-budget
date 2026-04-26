@@ -10,7 +10,6 @@ const BRAHIM_ID = ALLOWED_IDS[0];
 
 // ── VISION (photo/receipt OCR) ──────────────────────────────────────────────
 const VISION_MODELS = [
-  "meta-llama/llama-4-scout-17b-16e-instruct",
   "llama-3.2-90b-vision-preview",
   "llama-3.2-11b-vision-preview",
 ];
@@ -44,7 +43,9 @@ async function extract_from_image(image_url, today) {
   const buffer = await img_res.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
   const mime = image_url.toLowerCase().includes(".png") ? "image/png" : "image/jpeg";
+  console.log(`[vision] image size: ${buffer.byteLength} bytes, mime: ${mime}`);
 
+  let lastError = "";
   for (const model of VISION_MODELS) {
     try {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -68,7 +69,9 @@ async function extract_from_image(image_url, today) {
       });
 
       if (!res.ok) {
-        console.error(`[vision] ${model} → ${res.status}: ${await res.text()}`);
+        const errText = await res.text();
+        console.error(`[vision] ${model} → ${res.status}: ${errText}`);
+        lastError = `${model} HTTP ${res.status}: ${errText.slice(0, 200)}`;
         continue;
       }
 
@@ -81,10 +84,11 @@ async function extract_from_image(image_url, today) {
       return Array.isArray(parsed) ? parsed : [parsed];
     } catch (e) {
       console.error(`[vision] ${model}:`, e.message);
+      lastError = `${model}: ${e.message}`;
       continue;
     }
   }
-  throw new Error("Impossible d'analyser l'image");
+  throw new Error(lastError || "Tous les modèles ont échoué");
 }
 
 async function handlePhoto(msg) {
